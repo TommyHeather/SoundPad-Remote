@@ -94,7 +94,6 @@ def play(index):
 
 @app.route('/pause')
 def pause():
-    # Используем команду TogglePause, она надежнее переключает состояния
     sp_command("DoTogglePause()")
     return "ok"
 
