@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SP Remote</title>
+    <style>
+        body { background: #0f0f13; color: white; font-family: 'Segoe UI', sans-serif; padding: 15px; padding-bottom: 100px;}
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+        button { background: #1c1c24; color: white; border: 2px solid #2a2a35; border-radius: 12px; padding: 15px 5px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; touch-action: manipulation; transition: 0.1s;}
+        button:active { border-color: #00ff88; transform: scale(0.95);}
+        .sound-btn { position: relative; }
+        .duration-badge { position: absolute; bottom: 5px; right: 5px; font-size: 10px; color: #888; background: #000; padding: 2px 5px; border-radius: 4px; }
+        
+        .header-controls { display: flex; justify-content: space-between; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;}
+        .lang-btn { background: #2a2a35; border: none; padding: 10px; border-radius: 8px; font-size: 14px; width: 30%; color: white;}
+        
+        .panel { background: #1c1c24; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333;}
+        .panel input { padding: 10px; border-radius: 8px; border: none; background: #0f0f13; color: white; box-sizing: border-box;}
+        .btn-action { background: #00ff88; color: black; font-weight: bold; padding: 10px; border-radius: 8px; border: none; width: 100%;}
+        
+        .edit-on { border-color: #ffaa00 !important; background: #332200 !important; }
+        h3 { color:#888; border-bottom:1px solid #333; padding-bottom: 5px; margin-top: 25px;}
+        
+        .fab-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; align-items: flex-end; z-index: 1000;}
+        .fab { background: #00ff88; color: black; border-radius: 50%; width: 60px; height: 60px; font-size: 24px; box-shadow: 0 4px 15px rgba(0,255,136,0.4); border: none; align-items: center; justify-content: center; display: flex; margin-top: 10px;}
+        .fab-menu { background: #2a2a35; padding: 15px; border-radius: 16px; display: none; flex-direction: column; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); width: 150px;}
+        
+        .footer { text-align: center; margin-top: 50px; color: #555; font-size: 12px; font-weight: bold; }
+    </style>
+</head>
+<body onload="setLang('ru')">
+    <div class="header-controls">
+        <button class="lang-btn" onclick="setLang('en')">🇬🇧 EN</button>
+        <button class="lang-btn" onclick="setLang('ru')">🇷🇺 RU</button>
+        <button class="lang-btn" onclick="setLang('he')">🇮🇱 HE</button>
+    </div>
+
+    <h2 style="text-align:center; color:#00ff88;" id="t_title">🔊 SoundPad Remote</h2>
+
+    <div class="panel">
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <button onclick="sortSounds('alpha')" style="width: 50%;" id="t_sort_abc">🔤 Сорт. А-Я</button>
+            <button onclick="sortSounds('len')" style="width: 50%;" id="t_sort_len">⏱ Сорт. Длина</button>
+        </div>
+        <hr style="border-color: #333; margin: 15px 0;">
+        <p style="margin: 0 0 10px 0; font-size: 14px; color: #888;" id="t_upload">Загрузить с телефона:</p>
+        <input type="file" id="fileInput" accept="audio/*" style="width: 100%; margin-bottom: 10px;">
+        <button class="btn-action" onclick="uploadFile()" id="t_btn_upload">⬆️ Загрузить</button>
+    </div>
+
+    <div class="panel" style="border-color: #ffaa00;">
+        <p style="margin: 0 0 10px 0; font-size: 14px; color: #ffaa00;" id="t_edit_desc">Режим распределения (Клик для добавления/удаления):</p>
+        <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+            <input id="bulkCat" placeholder="Категория" value="Мемы" style="width: 70%;">
+            <input id="bulkIcon" placeholder="Эмодзи" value="🎵" style="width: 30%;">
+        </div>
+        <button class="btn-action" onclick="toggleEdit()" id="editBtn" style="background:#ffaa00;">Включить</button>
+    </div>
+
+    <div id="soundsContainer">
+        {% for cat, sounds in categories.items() %}
+            <div class="category-block" data-cat="{{ cat }}">
+                <h3>{{ cat }}</h3>
+                <div class="grid">
+                    {% for s in sounds %}
+                        <button class="sound-btn" data-title="{{ s.title }}" data-ms="{{ s.duration_ms }}" onclick="action('{{ s.index }}', '{{ s.title }}', this)">
+                            <span style="font-size:28px;">{{ s.icon }}</span>
+                            <span style="font-size:14px; text-align:center; word-break: break-word;">{{ s.title }}</span>
+                            {% if s.duration %}
+                            <div class="duration-badge">{{ s.duration }}</div>
+                            {% endif %}
+                        </button>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="fab-container">
+        <div class="fab-menu" id="fabMenu">
+            <div style="display: flex; gap: 10px; width: 100%;">
+                <button id="pauseBtn" style="width: 50%; font-size: 24px; padding: 10px; background: #333;" onclick="togglePause()">⏸</button>
+                <button style="width: 50%; font-size: 24px; padding: 10px; background: #ff4444;" onclick="fetch('/stop')">⏹</button>
+            </div>
+        </div>
+        <button class="fab" onclick="toggleFab()">🎧</button>
+    </div>
+
+    <div class="footer">
+        ✨ Supported by: TommyHeather ✨
+    </div>
+
+    <script>
+        let editing = false;
+        let currentLang = 'ru';
+
+        const dict = {
+            'ru': {
+                title: '🔊 SoundPad Пульт', sort_abc: '🔤 Сорт. А-Я', sort_len: '⏱ Сорт. Длина', 
+                upload: 'Загрузить с телефона:', btn_upload: '⬆️ Загрузить', 
+                edit_desc: 'Режим редактора (Клик для настройки):',
+                edit_on: 'Включить', edit_off: '🛑 Готово',
+                cat_ph: 'Категория', icon_ph: 'Эмодзи',
+                alert_no_file: 'Выбери файл для загрузки!', alert_uploading: '⏳ Грузим...',
+                status_added: '✅ Готово', status_removed: '❌ Сброшено'
+            },
+            'en': {
+                title: '🔊 SoundPad Remote', sort_abc: '🔤 Sort A-Z', sort_len: '⏱ Sort Len', 
+                upload: 'Upload from phone:', btn_upload: '⬆️ Upload', 
+                edit_desc: 'Edit Mode (Click sound to set):',
+                edit_on: 'Enable', edit_off: '🛑 Done',
+                cat_ph: 'Category', icon_ph: 'Emoji',
+                alert_no_file: 'Please select a file first!', alert_uploading: '⏳ Uploading...',
+                status_added: '✅ Saved', status_removed: '❌ Reset'
+            },
+            'he': {
+                title: '🔊 שלט SoundPad', sort_abc: '🔤 מיין א-ת', sort_len: '⏱ מיין אורך', 
+                upload: 'העלה מהטלפון:', btn_upload: '⬆️ העלה', 
+                edit_desc: 'מצב עריכה (לחץ על צליל להגדרה):',
+                edit_on: 'הפעל', edit_off: '🛑 סיים',
+                cat_ph: 'קטגוריה', icon_ph: 'אימוג\'י',
+                alert_no_file: 'אנא בחר קובץ תחילה!', alert_uploading: '⏳ מעלה...',
+                status_added: '✅ נשמר', status_removed: '❌ אופס'
+            }
+        };
+
+        function setLang(lang) {
+            currentLang = lang;
+            document.getElementById('t_title').innerText = dict[lang].title;
+            document.getElementById('t_sort_abc').innerText = dict[lang].sort_abc;
+            document.getElementById('t_sort_len').innerText = dict[lang].sort_len;
+            document.getElementById('t_upload').innerText = dict[lang].upload;
+            document.getElementById('t_btn_upload').innerText = dict[lang].btn_upload;
+            document.getElementById('t_edit_desc').innerText = dict[lang].edit_desc;
+            
+            document.getElementById('bulkCat').placeholder = dict[lang].cat_ph;
+            document.getElementById('bulkIcon').placeholder = dict[lang].icon_ph;
+            
+            let editBtn = document.getElementById('editBtn');
+            editBtn.innerText = editing ? dict[lang].edit_off : dict[lang].edit_on;
+
+            if(lang === 'he') document.body.style.direction = 'rtl';
+            else document.body.style.direction = 'ltr';
+        }
+
+        function toggleEdit() {
+            editing = !editing;
+            let btn = document.getElementById('editBtn');
+            if(editing) {
+                btn.innerText = dict[currentLang].edit_off;
+                btn.style.background = "#ff4444";
+                document.querySelectorAll('.sound-btn').forEach(b => b.classList.add('edit-on'));
+            } else {
+                btn.innerText = dict[currentLang].edit_on;
+                btn.style.background = "#ffaa00";
+                document.querySelectorAll('.sound-btn').forEach(b => b.classList.remove('edit-on'));
+                window.location.reload(); 
+            }
+        }
+
+        function action(index, title, btnElement) {
+            if(editing) {
+                let currentCat = btnElement.closest('.category-block').dataset.cat;
+                let targetCat = document.getElementById('bulkCat').value || "Без категории";
+                let targetIcon = document.getElementById('bulkIcon').value || "🎵";
+
+                let isSame = (currentCat === targetCat);
+                let newCat = isSame ? "Без категории" : targetCat;
+                let newIcon = isSame ? "🎵" : targetIcon;
+
+                fetch('/update', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({title: title, category: newCat, icon: newIcon})
+                });
+                
+                btnElement.style.opacity = "0.3";
+                btnElement.innerText = isSame ? dict[currentLang].status_removed : dict[currentLang].status_added;
+            } else {
+                fetch('/play/' + index);
+                if(navigator.vibrate) navigator.vibrate(50);
+            }
+        }
+
+        function toggleFab() {
+            let menu = document.getElementById('fabMenu');
+            menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        let isPaused = false;
+        function togglePause() {
+            isPaused = !isPaused;
+            let btn = document.getElementById('pauseBtn');
+            btn.innerText = isPaused ? "▶️" : "⏸";
+            fetch('/pause');
+        }
+
+        async function uploadFile() {
+            let fileInput = document.getElementById('fileInput');
+            if(fileInput.files.length === 0) return alert(dict[currentLang].alert_no_file);
+            
+            let formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+            
+            document.getElementById('t_btn_upload').innerText = dict[currentLang].alert_uploading;
+            await fetch('/upload', { method: 'POST', body: formData });
+            window.location.reload();
+        }
+
+        function sortSounds(type) {
+            document.querySelectorAll('.category-block').forEach(block => {
+                let grid = block.querySelector('.grid');
+                let btns = Array.from(grid.querySelectorAll('.sound-btn'));
+                
+                btns.sort((a, b) => {
+                    if(type === 'alpha') return a.dataset.title.localeCompare(b.dataset.title);
+                    if(type === 'len') return parseInt(b.dataset.ms) - parseInt(a.dataset.ms);
+                });
+                
+                btns.forEach(btn => grid.appendChild(btn)); 
+            });
+        }
+    </script>
+</body>
+</html>
