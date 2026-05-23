@@ -214,8 +214,16 @@
                 let btns = Array.from(grid.querySelectorAll('.sound-btn'));
                 
                 btns.sort((a, b) => {
-                    if(type === 'alpha') return a.dataset.title.localeCompare(b.dataset.title);
-                    if(type === 'len') return parseInt(b.dataset.ms) - parseInt(a.dataset.ms);
+                    if(type === 'alpha') {
+                        let titleA = a.dataset.title || "";
+                        let titleB = b.dataset.title || "";
+                        return titleA.localeCompare(titleB);
+                    }
+                    if(type === 'len') {
+                        let valA = parseInt(a.dataset.ms) || 0;
+                        let valB = parseInt(b.dataset.ms) || 0;
+                    }
+                    return 0;
                 });
                 
                 btns.forEach(btn => grid.appendChild(btn)); 
