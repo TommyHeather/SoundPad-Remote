@@ -52,7 +52,7 @@
     <div class="panel" style="border-color: #ffaa00;">
         <p style="margin: 0 0 10px 0; font-size: 14px; color: #ffaa00;" id="t_edit_desc">Режим распределения (Клик для добавления/удаления):</p>
         <div style="display: flex; margin-bottom: 10px;">
-            <input id="bulkCat" placeholder="Категория" value="Мемы" style="width: 100%;">
+            <input id="bulkCat" placeholder="Категория" value="" style="width: 100%;">
         </div>
         <button class="btn-action" onclick="toggleEdit()" id="editBtn" style="background:#ffaa00;">Включить</button>
     </div>
@@ -100,8 +100,9 @@
                 upload: 'Загрузить с телефона:', btn_upload: '⬆️ Загрузить', 
                 edit_desc: 'Режим редактора (Клик для настройки):',
                 edit_on: 'Включить', edit_off: '🛑 Готово', cat_ph: 'Категория',
-                alert_no_file: 'Выбери файл для загрузки!', alert_uploading: '⏳ Грузим...',
-                status_added: '✅ Готово', status_removed: '❌ Сброшено'
+                alert_no_file: 'Выбери файл для загрузки!', alert_uploading: '⏳ Начинаем загрузку...',
+                status_added: '✅ Готово', status_removed: '❌ Сброшено',
+                default_cat: 'Мемы', uncategorized: 'Без категории'
             },
             'en': {
                 title: '🔊 SoundPad Remote', sort_abc: '🔤 Sort A-Z', sort_len: '⏱ Sort Len', 
@@ -109,7 +110,8 @@
                 edit_desc: 'Edit Mode (Click sound to set):',
                 edit_on: 'Enable', edit_off: '🛑 Done', cat_ph: 'Category',
                 alert_no_file: 'Please select a file first!', alert_uploading: '⏳ Uploading...',
-                status_added: '✅ Saved', status_removed: '❌ Reset'
+                status_added: '✅ Saved', status_removed: '❌ Reset',
+                default_cat: 'Memes', uncategorized: 'Uncategorized'
             },
             'he': {
                 title: '🔊 שלט SoundPad', sort_abc: '🔤 מיין א-ת', sort_len: '⏱ מיין אורך', 
@@ -117,19 +119,24 @@
                 edit_desc: 'מצב עריכה (לחץ על צליל להגדרה):',
                 edit_on: 'הפעל', edit_off: '🛑 סיים', cat_ph: 'קטגוריה',
                 alert_no_file: 'אנא בחר קובץ תחילה!', alert_uploading: '⏳ מעלה...',
-                status_added: '✅ נשמר', status_removed: '❌ אופס'
+                status_added: '✅ נשמר', status_removed: '❌ אופס',
+                default_cat: 'ממים', uncategorized: 'ללא קטגוריה'
             }
         };
 
-        // Initialize language
         function initLang() {
             let savedLang = localStorage.getItem('sp_lang') || 'ru';
             setLang(savedLang);
         }
 
         function setLang(lang) {
+            let bulkCatInput = document.getElementById('bulkCat');
+            if (!bulkCatInput.value || bulkCatInput.value === dict[currentLang].default_cat) {
+                bulkCatInput.value = dict[lang].default_cat;
+            }
+
             currentLang = lang;
-            localStorage.setItem('sp_lang', lang); // Saving language setting 
+            localStorage.setItem('sp_lang', lang); 
             
             document.getElementById('t_title').innerText = dict[lang].title;
             document.getElementById('t_sort_abc').innerText = dict[lang].sort_abc;
@@ -141,6 +148,11 @@
             
             let editBtn = document.getElementById('editBtn');
             editBtn.innerText = editing ? dict[lang].edit_off : dict[lang].edit_on;
+
+            let uncatedBlock = document.querySelector('.category-block[data-cat="Без категории"] h3');
+            if (uncatedBlock) {
+                uncatedBlock.innerText = dict[lang].uncategorized;
+            }
 
             if(lang === 'he') document.body.style.direction = 'rtl';
             else document.body.style.direction = 'ltr';
@@ -164,7 +176,12 @@
         function action(index, title, btnElement) {
             if(editing) {
                 let currentCat = btnElement.closest('.category-block').dataset.cat;
-                let targetCat = document.getElementById('bulkCat').value || "Без категории";
+                let inputVal = document.getElementById('bulkCat').value.trim();
+                
+                let targetCat = inputVal;
+                if (inputVal === dict[currentLang].uncategorized || !inputVal) {
+                    targetCat = "Без категории";
+                }
                 
                 let isSame = (currentCat === targetCat);
                 let newCat = isSame ? "Без категории" : targetCat;
